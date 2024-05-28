@@ -38,9 +38,10 @@ def end_lottery():
     lottery_end_txn = lottery.endLottery({"from":account})
     lottery_end_txn.wait(1)
     time.sleep(60)
-    print("Lottery is ended and the winner is -> " + lottery.recentWinner)
+    print("Lottery is ended and the winner is -> " + lottery.recentWinner())
 
 def main():
     deploy_lottery()
     start_lottery()
     enter_lottery()
+    end_lottery()

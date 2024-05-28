@@ -13,8 +13,8 @@ def get_account():
 def fund_with_link(contract_address):
     account = get_account()
     amount = 250000000000000000
-    link_token = config["networks"][network.show_active()]["link_token"]
-    link_token_contract = interface.LinkTokenContract(link_token)
+    link_token = get_contract("link_token")
+    link_token_contract = interface.LinkTokenInterface(link_token)
     txn = link_token_contract.transfer(contract_address, amount, {"from":account})
     txn.wait(1)
     print("Contract funded with link token!")
