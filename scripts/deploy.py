@@ -1,19 +1,19 @@
 from brownie import network, Lottery, config
 import time
-from scripts.helpful_scripts import get_account, fund_with_link, get_contract
+from scripts.helpful_scripts import get_account, get_contract
 
 def deploy_lottery():
     account = get_account()
-    Lottery.deploy(
+    lottery = Lottery.deploy(
         get_contract("eth_usd_price_feed").address,
         get_contract("vrf_coordinator").address,
-        get_contract("link_token").address,
-        config["networks"][network.show_active()]["fee"],
+        config["networks"][network.show_active()]["subscription_id"] ,
         config["networks"][network.show_active()]["key_hash"] ,
         {"from":account}
     )
     time.sleep(1)
     print("Lottery Deployed!")
+    return lottery
 
 def start_lottery():
     account = get_account()
@@ -33,8 +33,6 @@ def enter_lottery():
 def end_lottery():
     account = get_account()
     lottery = Lottery[-1]
-    txn = fund_with_link(lottery.address)
-    txn.wait(1)
     lottery_end_txn = lottery.endLottery({"from":account})
     lottery_end_txn.wait(1)
     time.sleep(60)

@@ -6,21 +6,21 @@ compiler:
     remappings:
       - '@chainlink=smartcontractkit/chainlink-brownie-contracts@1.1.1'
       - '@openzeppelin=OpenZeppelin/openzeppelin-contracts@5.0.2'
-      
 
 
 networks:
   default: "mainnet-fork"
   mainnet-fork:
     eth_usd_price_feed: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419'
+    vrf_coordinator: '0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625'
     key_hash: '0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c'
-    fee: 250000000000000000
+    subscription_id: "7791546350787163537159767666152369402792228230855222073295307844550960320605"
     verify: False
   sepolia:
     eth_usd_price_feed: '0x694AA1769357215DE4FAC081bf1f309aDC325306'
     vrf_coordinator: '0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625'
-    link_token: '0x779877A7B0D9E8603169DdbD7836e478b4624789'
     key_hash: '0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c'
+    subscription_id: "7791546350787163537159767666152369402792228230855222073295307844550960320605"
     fee: 250000000000000000
     verify: True
 

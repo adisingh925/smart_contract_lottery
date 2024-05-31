@@ -3,13 +3,15 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import {VRFConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBase.sol";
+import "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
+import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
 
-contract Lottery is Ownable, VRFConsumerBase {
+contract Lottery is Ownable, VRFConsumerBaseV2 {
 
     address[] public players;
     uint256 public usdEntryFee; 
     AggregatorV3Interface internal priceFeed;
+    VRFCoordinatorV2Interface internal COORDINATOR;
     enum LOTTERY_STATE {
         OPEN,
         CLOSED,
@@ -19,15 +21,24 @@ contract Lottery is Ownable, VRFConsumerBase {
     uint256 public fee;
     bytes32 public keyHash;
     address public recentWinner;
+    uint256 public subscriptionId; 
+    uint32 callbackGasLimit = 40000;
+    uint16 requestConfirmations = 3;
+    uint32 numWords = 1;
 
-    constructor(address _priceFeedAddress, address _vrfCoordinator, address _link, uint256 _fee, bytes32 _keyHash) Ownable(msg.sender) VRFConsumerBase(_vrfCoordinator, _link) {
+    event RequestedRandomWords(uint256 requestId);
+
+    constructor(address _priceFeedAddress, address _vrfCoordinator, uint256 _subscriptionId, bytes32 _keyHash) Ownable(msg.sender) VRFConsumerBaseV2(_vrfCoordinator) {
         usdEntryFee = 50;
         priceFeed = AggregatorV3Interface(_priceFeedAddress);
         lottery_state = LOTTERY_STATE.CLOSED;
+        COORDINATOR = VRFCoordinatorV2Interface(_vrfCoordinator);
+        keyHash = _keyHash;
+        subscriptionId = _subscriptionId;
     }
 
     function enter() public payable {
-        require(lottery_state == LOTTERY_STATE.OPEN);
+        require(lottery_state == LOTTERY_STATE.OPEN, "Lottery is not open!");
         require(msg.value >= getEntranceFee(), "Not Enough ETH!");
         players.push(msg.sender);
     }
@@ -59,15 +70,23 @@ contract Lottery is Ownable, VRFConsumerBase {
         lottery_state = LOTTERY_STATE.CALCULATING_WINNER;
 
         // Requesting a random number from the oracle network
-        bytes32 requestId = requestRandomness(keyHash, fee);
+        uint256 requestId = COORDINATOR.requestRandomWords(
+            keyHash,
+            subscriptionId,
+            requestConfirmations,
+            callbackGasLimit,
+            numWords
+       );
+
+        emit RequestedRandomWords(requestId);
     }
 
-    function fulfillRandomness(bytes32 _requestId, uint256 _randomness) internal override {
+    function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
         require(lottery_state == LOTTERY_STATE.CALCULATING_WINNER, "Illegal function call!");
-        require(_randomness > 0, "Incorrect Random Value");
+        require(_randomWords[0] > 0, "Incorrect Random Value");
 
         // Calculating the winner of the lottery
-        uint256 winnerIndex = _randomness % players.length;
+        uint256 winnerIndex = _randomWords[0] % players.length;
         recentWinner = players[winnerIndex];
         
         // Transfering all the money to the winner
