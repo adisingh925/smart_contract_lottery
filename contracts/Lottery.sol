@@ -3,10 +3,10 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
-import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
+import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
-contract Lottery is Ownable, VRFConsumerBaseV2 {
+contract Lottery is Ownable, VRFConsumerBaseV2Plus {
 
     address[] public players;
     uint256 public usdEntryFee; 
@@ -19,17 +19,18 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
     }
     LOTTERY_STATE public lottery_state;
     uint256 public fee;
-    bytes32 public keyHash;
     address public recentWinner;
-    uint64 public subscriptionId;
+
+    bytes32 immutable public keyHash;
+    uint256 immutable public subscriptionId;
  
-    uint32 constant CALLBACK_GAS_LIMIT = 100000;
-    uint16 constant REQUEST_CONFORMATIONS = 3;
-    uint32 constant NUM_WORDS = 2;
+    uint32 constant public CALLBACK_GAS_LIMIT = 100000;
+    uint16 constant public REQUEST_CONFORMATIONS = 3;
+    uint32 constant public NUM_WORDS = 2;
 
     event RequestedRandomWords(uint256 requestId);
 
-    constructor(address _priceFeedAddress, address _vrfCoordinator, uint64 _subscriptionId, bytes32 _keyHash) Ownable(msg.sender) VRFConsumerBaseV2(_vrfCoordinator) {
+    constructor(address _priceFeedAddress, address _vrfCoordinator, uint256 _subscriptionId, bytes32 _keyHash) Ownable(msg.sender) VRFConsumerBaseV2Plus(_vrfCoordinator) {
         usdEntryFee = 50;
         priceFeed = AggregatorV3Interface(_priceFeedAddress);
         lottery_state = LOTTERY_STATE.CLOSED;
@@ -71,13 +72,17 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
         lottery_state = LOTTERY_STATE.CALCULATING_WINNER;
 
         // Requesting a random number from the oracle network
-        uint256 requestId = COORDINATOR.requestRandomWords(
-            keyHash,
-            subscriptionId,
-            REQUEST_CONFORMATIONS,
-            CALLBACK_GAS_LIMIT,
-            NUM_WORDS
-       );
+        uint256 requestId = s_vrfCoordinator.requestRandomWords(
+            VRFV2PlusClient.RandomWordsRequest({
+                keyHash: s_keyHash,
+                subId: s_subscriptionId,
+                requestConfirmations: REQUEST_CONFORMATIONS,
+                callbackGasLimit: CALLBACK_GAS_LIMIT,
+                numWords: NUM_WORDS,
+                // Set nativePayment to true to pay for VRF requests with Sepolia ETH instead of LINK
+                extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: false}))
+            })
+        );
 
         emit RequestedRandomWords(requestId);
     }
