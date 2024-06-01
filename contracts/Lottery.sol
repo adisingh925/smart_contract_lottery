@@ -121,6 +121,8 @@ contract Lottery is VRFConsumerBaseV2Plus {
         } 
 
         if(_randomWords[0] <= 0){
+            // Reverting lottery state due to failure
+            lottery_state = LOTTERY_STATE.OPEN;
             revert incorrectRandomValueException();
         }
 

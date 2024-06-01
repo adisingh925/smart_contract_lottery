@@ -39,7 +39,25 @@ def end_lottery():
     print("Lottery is ended and the winner is -> " + lottery.recentWinner())
 
 def main():
-    deploy_lottery()
-    start_lottery()
-    enter_lottery()
-    end_lottery()
+    while True:
+        print("\nLottery Menu:")
+        print("1. Deploy Lottery")
+        print("2. Start Lottery")
+        print("3. Enter Lottery")
+        print("4. End Lottery")
+        print("5. Exit")
+        choice = input("Enter your choice (1-5): ")
+
+        if choice == "1":
+            deploy_lottery()
+        elif choice == "2":
+            start_lottery()
+        elif choice == "3":
+            enter_lottery()
+        elif choice == "4":
+            end_lottery()
+        elif choice == "5":
+            print("Exiting...")
+            break
+        else:
+            print("Invalid choice. Please try again.")
