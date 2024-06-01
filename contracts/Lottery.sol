@@ -19,61 +19,91 @@ contract Lottery is VRFConsumerBaseV2Plus {
     LOTTERY_STATE public lottery_state;
     address public recentWinner;
 
-    bytes32 immutable public keyHash;
-    uint256 immutable public subscriptionId;
+    bytes32 immutable public KEY_HASH;
+    uint256 immutable public SUBSCRIPTION_ID;
  
     // Constants
-    uint32 constant public CALLBACK_GAS_LIMIT = 100000;
+    uint32 constant public CALLBACK_GAS_LIMIT = 1000000;
     uint16 constant public REQUEST_CONFORMATIONS = 3;
-    uint32 constant public NUM_WORDS = 2;
+    uint32 constant public NUM_WORDS = 1;
 
     event RequestedRandomWords(uint256 requestId);
+
+    error unauthorizedAccessException(address expected, address received);
+    error lotteryStateException(LOTTERY_STATE expectedState, LOTTERY_STATE actualState);
+    error insufficientEtherException(uint256 expectedAmount, uint256 actualAmount);
+    error InvalidPriceFeedDataException(); 
+    error entryFeeTooLowException();
+    error ethPriceTooLowException();
+    error incorrectRandomValueException();
+    error costTooLowException();
 
     constructor(address _priceFeedAddress, address _vrfCoordinator, uint256 _subscriptionId, bytes32 _keyHash) VRFConsumerBaseV2Plus(_vrfCoordinator) {
         usdEntryFee = 50;
         priceFeed = AggregatorV3Interface(_priceFeedAddress);
         lottery_state = LOTTERY_STATE.CLOSED;
-        keyHash = _keyHash;
-        subscriptionId = _subscriptionId;
+        KEY_HASH = _keyHash;
+        SUBSCRIPTION_ID = _subscriptionId;
     }
 
     function enter() public payable {
-        require(lottery_state == LOTTERY_STATE.OPEN, "Lottery is not open!");
-        require(msg.value >= getEntranceFee(), "Not Enough ETH!");
+        if(lottery_state != LOTTERY_STATE.OPEN){
+            revert lotteryStateException(LOTTERY_STATE.OPEN, lottery_state);
+        } 
+
+        if(msg.value < getEntranceFee()){
+            revert insufficientEtherException(getEntranceFee(), msg.value);
+        }
+
         players.push(msg.sender);
     }
 
     function getEntranceFee() public view returns (uint256) {
         (,int answer,,,) = priceFeed.latestRoundData();
-        require(answer > 0, "Invalid price feed data");
+        if(answer <= 0){
+            revert InvalidPriceFeedDataException();
+        }
 
         uint256 ethPrice = uint256(answer) * 1e10; 
         uint256 adjustedUsdEntryFee = usdEntryFee * 1e18;
         
-        require(adjustedUsdEntryFee > 0, "USD entry fee is too low");
-        require(ethPrice > 0, "ETH price is too low");
+        if(adjustedUsdEntryFee <= 0){
+            revert entryFeeTooLowException();
+        }
+
+        if(ethPrice <= 0){
+            revert ethPriceTooLowException();
+        }
 
         uint256 costToEnter = (adjustedUsdEntryFee * 1e18) / ethPrice;
 
-        require(costToEnter > 0, "Cost is too low!");
+        if(costToEnter <= 0){
+            revert costTooLowException();
+        }
 
         return costToEnter;        
     }
 
     function startLottery() public onlyOwner() {
-        require(lottery_state == LOTTERY_STATE.CLOSED, "Can't start a new lottery yet!");
+        if(lottery_state != LOTTERY_STATE.CLOSED){
+            revert lotteryStateException(LOTTERY_STATE.CLOSED, lottery_state);
+        }     
+
         lottery_state = LOTTERY_STATE.OPEN;
     }
 
     function endLottery() public onlyOwner() {
-        require(lottery_state == LOTTERY_STATE.OPEN, "Can't end the lottery yet!");
+        if(lottery_state != LOTTERY_STATE.OPEN){
+            revert lotteryStateException(LOTTERY_STATE.OPEN, lottery_state);
+        }
+
         lottery_state = LOTTERY_STATE.CALCULATING_WINNER;
 
         // Requesting a random number from the oracle network
         uint256 requestId = s_vrfCoordinator.requestRandomWords(
             VRFV2PlusClient.RandomWordsRequest({
-                keyHash: keyHash,
-                subId: subscriptionId,
+                keyHash: KEY_HASH,
+                subId: SUBSCRIPTION_ID,
                 requestConfirmations: REQUEST_CONFORMATIONS,
                 callbackGasLimit: CALLBACK_GAS_LIMIT,
                 numWords: NUM_WORDS,
@@ -85,9 +115,14 @@ contract Lottery is VRFConsumerBaseV2Plus {
         emit RequestedRandomWords(requestId);
     }
 
-    function fulfillRandomWords(uint256 _requestId, uint256[] calldata _randomWords) internal override {
-        require(lottery_state == LOTTERY_STATE.CALCULATING_WINNER, "Illegal function call!");
-        require(_randomWords[0] > 0, "Incorrect Random Value");
+    function fulfillRandomWords(uint256, uint256[] calldata _randomWords) internal override {
+        if(lottery_state != LOTTERY_STATE.CALCULATING_WINNER){
+            revert lotteryStateException(LOTTERY_STATE.CALCULATING_WINNER, lottery_state);
+        } 
+
+        if(_randomWords[0] <= 0){
+            revert incorrectRandomValueException();
+        }
 
         // Calculating the winner of the lottery
         uint256 winnerIndex = _randomWords[0] % players.length;
