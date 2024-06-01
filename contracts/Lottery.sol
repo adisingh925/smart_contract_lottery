@@ -21,14 +21,15 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
     uint256 public fee;
     bytes32 public keyHash;
     address public recentWinner;
-    uint256 public subscriptionId; 
-    uint32 callbackGasLimit = 100000;
-    uint16 requestConfirmations = 3;
-    uint32 numWords = 2;
+    uint64 public subscriptionId;
+ 
+    uint32 constant CALLBACK_GAS_LIMIT = 100000;
+    uint16 constant REQUEST_CONFORMATIONS = 3;
+    uint32 constant NUM_WORDS = 2;
 
     event RequestedRandomWords(uint256 requestId);
 
-    constructor(address _priceFeedAddress, address _vrfCoordinator, uint256 _subscriptionId, bytes32 _keyHash) Ownable(msg.sender) VRFConsumerBaseV2(_vrfCoordinator) {
+    constructor(address _priceFeedAddress, address _vrfCoordinator, uint64 _subscriptionId, bytes32 _keyHash) Ownable(msg.sender) VRFConsumerBaseV2(_vrfCoordinator) {
         usdEntryFee = 50;
         priceFeed = AggregatorV3Interface(_priceFeedAddress);
         lottery_state = LOTTERY_STATE.CLOSED;
@@ -73,9 +74,9 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
         uint256 requestId = COORDINATOR.requestRandomWords(
             keyHash,
             subscriptionId,
-            requestConfirmations,
-            callbackGasLimit,
-            numWords
+            REQUEST_CONFORMATIONS,
+            CALLBACK_GAS_LIMIT,
+            NUM_WORDS
        );
 
         emit RequestedRandomWords(requestId);

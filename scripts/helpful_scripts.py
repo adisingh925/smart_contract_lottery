@@ -15,13 +15,13 @@ def deploy_mocks(decimals=DECIMALS, initial_value=INITIAL_VALUE):
     account = get_account()
     MockV3Aggregator.deploy(decimals, initial_value, {"from":account})
     time.sleep(1)
-    VRFCoordinatorV2Mock.deploy(
+    txn = VRFCoordinatorV2Mock.deploy(
         100000000000000000, 
         1000000000, 
         {"from":account}
     )
-    VRFCoordinatorV2Mock[-1].createSubscription()
-    VRFCoordinatorV2Mock[-1].fundSubscription(1, 1000000000000000000)
+    txn.createSubscription()
+    txn.fundSubscription(1, 1000000000000000000)
 
 get_contract_from_name = {"eth_usd_price_feed" : MockV3Aggregator, "vrf_coordinator" : VRFCoordinatorV2Mock}
 
