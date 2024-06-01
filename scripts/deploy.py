@@ -9,7 +9,8 @@ def deploy_lottery():
         get_contract("vrf_coordinator").address,
         config["networks"][network.show_active()]["subscription_id"] ,
         config["networks"][network.show_active()]["key_hash"] ,
-        {"from":account}
+        {"from":account},
+        # publish_source=config["networks"][network.show_active()]["verify"]
     )
     time.sleep(1)
     print("Lottery Deployed!")

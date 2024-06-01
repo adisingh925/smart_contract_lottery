@@ -22,9 +22,9 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
     bytes32 public keyHash;
     address public recentWinner;
     uint256 public subscriptionId; 
-    uint32 callbackGasLimit = 40000;
+    uint32 callbackGasLimit = 100000;
     uint16 requestConfirmations = 3;
-    uint32 numWords = 1;
+    uint32 numWords = 2;
 
     event RequestedRandomWords(uint256 requestId);
 
@@ -65,8 +65,8 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
         lottery_state = LOTTERY_STATE.OPEN;
     }
 
-    function endLottery() public {
-        require(lottery_state == LOTTERY_STATE.OPEN);
+    function endLottery() public onlyOwner {
+        require(lottery_state == LOTTERY_STATE.OPEN, "Can't end the lottery yet!");
         lottery_state = LOTTERY_STATE.CALCULATING_WINNER;
 
         // Requesting a random number from the oracle network
